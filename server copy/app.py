@@ -2,46 +2,54 @@ from flask import Flask, request, render_template
 import pandas as pd
 import numpy as np
 app = Flask(__name__)
-from tensorflow.keras.models import load_model
-model = load_model(f"M9-2-2025-ta/model.h5")
-with open(f"M9-2-2025-ta/text.txt", "r") as f:
-    class_names = f.read().splitlines()
 
+lc = False
+rc = False
 ldata = []
 rdata = []
-rc = False
-lc = False
-label="test"
+forpredict = []
+label="Hello"
 start = False
 
-def predict():
-    global ldata, rdata, rc, lc, label
-    rc = False
-    lc = False
-    forpredict = ldata + rdata
-    print(len(forpredict), "features")
-    df = np.array([forpredict]).reshape(1, -1)
-    pred = model.predict(df)
-    index = np.argmax(pred)
-    label = class_names[index]
-    print(label)
+def predict(side, data):
+    global start, label, forpredict, ldata, rdata, lc, rc
+    if start:
+        if len(forpredict) < 288:
+            if side == "l" and not lc:
+                ldata = data
+                lc = True
+            elif side == "r" and not rc:
+                rdata = data
+                rc = True
+            if lc and rc:
+                forpredict.extend(ldata)
+                forpredict.extend(rdata)
+                lc = False
+                rc = False
+        else:
+            df = pd.DataFrame([forpredict])
+            df.to_csv('data/main.csv', mode="a", index=False, header=False)
+            forpredict=[]
+            start = False
+            print(""*3)
+            print("Data saved")
+            print(""*3)
 
 @app.route('/', methods=['POST', 'GET'])
 def mainweb():
     return render_template('index.html', prediction=label)
 
 @app.route('/btn', methods=['POST'])
-def onoff():
+def btn():
     global start
-    if start:
-        start = False
-    else:
+    print("Button pressed")
+    if not start:
         start = True
     return "OK"
 
 @app.route('/right', methods=['POST'])
-def rdata():
-    global rdata, rc, lc, start
+def rget():
+    global start
     if start:
         rc = True
         data = request.get_json()
@@ -58,12 +66,11 @@ def rdata():
         rflex_4 = data["flex_raw_4"]
         rflex_5 = data["flex_raw_5"]
         rdata = [raccel_x, raccel_y, raccel_z, rgyro_x, rgyro_y, rgyro_z, rtemp, rflex_1, rflex_2, rflex_3, rflex_4, rflex_5]
-        if lc and rc:
-            predict()
+        predict("r", rdata)
     return "OK"
 
 @app.route('/left', methods=['POST'])
-def ldata():
+def lget():
     global ldata, lc, rc, start
     if start:
         lc = True
@@ -81,8 +88,7 @@ def ldata():
         lflex_4 = data["flex_raw_4"]
         lflex_5 = data["flex_raw_5"]
         ldata = [laccel_x, laccel_y, laccel_z, lgyro_x, lgyro_y, lgyro_z, ltemp, lflex_1, lflex_2, lflex_3, lflex_4, lflex_5]
-        if lc and rc:
-            predict()
+        predict("l", ldata)
     return "OK"
 
 app.run(host="0.0.0.0", port=5000)

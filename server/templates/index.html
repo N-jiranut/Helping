@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Model Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='why.css') }}">
+    <meta http-equiv="refresh" content="2"> 
+</head>
+<body>
+    <div class="container">
+        <h1>🔮 Model Prediction</h1>
+
+        {% if prediction %}
+            <div class="result">
+                <h2>✨ Prediction: <span>{{ prediction }}</span></h2>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

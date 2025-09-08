@@ -7,8 +7,7 @@
 const char* ssid = "vivo_V25";
 const char* password = "02_jiranut";
 
-// const String scriptURL = "https://script.google.com/macros/s/AKfycbzBV-m5zoYQ2tLPSUkq4XFDHVlQaisYEhMwOvvxOY4EFUd07wML1OWgW_mMngrxlU7iaQ/exec"; // ลิงก์ Web App
-const char* serverName = "http://10.207.14.79:5000/data";
+const char* serverName = "http://10.207.14.216:5000/right";
 
 WiFiClient client;
 HTTPClient http;
@@ -25,11 +24,11 @@ void connectToWiFi() {
 
 Adafruit_MPU6050 mpu;
 
-const int FLEX_PIN_THUMB = 1;
-const int FLEX_PIN_INDEX = 2;
-const int FLEX_PIN_MIDDLE = 3;
-const int FLEX_PIN_RING = 4;
-const int FLEX_PIN_PINKY = 5;
+const int FLEX_PIN_THUMB = 4;
+const int FLEX_PIN_INDEX = 6;
+const int FLEX_PIN_MIDDLE = 15;
+const int FLEX_PIN_RING = 17;
+const int FLEX_PIN_PINKY = 8;
 
 int flexSensorValues[5];
 const int FLEX_PINS[] = {FLEX_PIN_THUMB, FLEX_PIN_INDEX, FLEX_PIN_MIDDLE, FLEX_PIN_RING, FLEX_PIN_PINKY};
@@ -43,7 +42,7 @@ void setup() {
 
   connectToWiFi(); 
   Serial.println("Initializing I2C bus on GPIO 8 (SDA) and GPIO 9 (SCL)...");
-  Wire.begin(8, 9);
+  Wire.begin(1, 2);
   delay(100);
   Serial.println("Attempting to find MPU6050 chip...");
   if (!mpu.begin()) {
@@ -93,35 +92,10 @@ unsigned long del = 0;
 void loop() {
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
-  // Serial.print("ACCEL (m/s^2) - X: ");
-  // Serial.print(a.acceleration.x, 2);
-  // Serial.print(", Y: ");
-  // Serial.print(a.acceleration.y, 2);
-  // Serial.print(", Z: ");
-  // Serial.print(a.acceleration.z, 2);
-  // Serial.print(" | ");
-  // Serial.print("GYRO (rad/s) - X: ");
-  // Serial.print(g.gyro.x, 2);
-  // Serial.print(", Y: ");
-  // Serial.print(g.gyro.y, 2);
-  // Serial.print(", Z: ");
-  // Serial.print(g.gyro.z, 2);
-  // Serial.print(" | ");
-  // Serial.print("TEMP: ");
-  // Serial.print(temp.temperature, 2);
-  // Serial.print(" C | ");
-  // Serial.print("FLEX SENSORS (Raw/%) - ");
   for (int i = 0; i < 5; i++) {
     flexSensorValues[i] = analogRead(FLEX_PINS[i]);
     int bendPercentage = map(flexSensorValues[i], FLEX_MIN_STRAIGHT, FLEX_MAX_BENT, 0, 100);
     bendPercentage = constrain(bendPercentage, 0, 100);
-    // Serial.print("F");
-    // Serial.print(i + 1);
-    // Serial.print(": ");
-    // Serial.print(flexSensorValues[i]);
-    // Serial.print("/");
-    // Serial.print(bendPercentage);
-    // Serial.print("% ");
   }
   Serial.println();
   if (WiFi.status() == WL_CONNECTED) {
@@ -153,5 +127,5 @@ void loop() {
     Serial.println("WiFi disconnected. Reconnecting...");
     connectToWiFi();
   }
-  delay(1000);
+  delay(250);
 }
