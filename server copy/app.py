@@ -10,63 +10,33 @@ rdata = []
 forpredict = []
 label="Hello"
 start = False
+status = "Idle"
 
-def predict(side, data):
-    global start, label, forpredict, ldata, rdata, lc, rc
+def predict(data):
+    global start, label, forpredict, ldata, rdata, lc, rc, status
     if start:
-        if len(forpredict) < 288:
-            if side == "l" and not lc:
-                ldata = data
-                lc = True
-            elif side == "r" and not rc:
-                rdata = data
-                rc = True
-            if lc and rc:
-                forpredict.extend(ldata)
-                forpredict.extend(rdata)
-                lc = False
-                rc = False
-        else:
-            df = pd.DataFrame([forpredict])
-            df.to_csv('data/main.csv', mode="a", index=False, header=False)
-            forpredict=[]
-            start = False
-            print(""*3)
-            print("Data saved")
-            print(""*3)
+        print("Predicting...")
+        df = pd.DataFrame([data])
+        df.to_csv('data/prime.csv', mode="a", index=False, header=False)
+        forpredict=[]
+        status = "Idle"
+        start = False
+        print(""*3)
+        print("Data saved")
+        print(""*3)
 
 @app.route('/', methods=['POST', 'GET'])
 def mainweb():
-    return render_template('index.html', prediction=label)
+    global label, status
+    return render_template('index.html', prediction=label, status=status)
 
 @app.route('/btn', methods=['POST'])
 def btn():
-    global start
+    global start, status
+    status = "Working"
     print("Button pressed")
     if not start:
         start = True
-    return "OK"
-
-@app.route('/right', methods=['POST'])
-def rget():
-    global start
-    if start:
-        rc = True
-        data = request.get_json()
-        raccel_x = data["accel_x"]
-        raccel_y = data["accel_y"]
-        raccel_z = data["accel_z"]
-        rgyro_x  = data["gyro_x"]
-        rgyro_y  = data["gyro_y"]
-        rgyro_z  = data["gyro_z"]
-        rtemp = data["temperature"]
-        rflex_1 = data["flex_raw_1"]
-        rflex_2 = data["flex_raw_2"]
-        rflex_3 = data["flex_raw_3"]
-        rflex_4 = data["flex_raw_4"]
-        rflex_5 = data["flex_raw_5"]
-        rdata = [raccel_x, raccel_y, raccel_z, rgyro_x, rgyro_y, rgyro_z, rtemp, rflex_1, rflex_2, rflex_3, rflex_4, rflex_5]
-        predict("r", rdata)
     return "OK"
 
 @app.route('/left', methods=['POST'])
@@ -75,20 +45,19 @@ def lget():
     if start:
         lc = True
         data = request.get_json()
-        laccel_x = data["accel_x"]
-        laccel_y = data["accel_y"]
-        laccel_z = data["accel_z"]
-        lgyro_x  = data["gyro_x"]
-        lgyro_y  = data["gyro_y"]
-        lgyro_z  = data["gyro_z"]
-        ltemp = data["temperature"]
+        # laccel_x = data["accel_x"]
+        # laccel_y = data["accel_y"]
+        # laccel_z = data["accel_z"]
+        # lgyro_x  = data["gyro_x"]
+        # lgyro_y  = data["gyro_y"]
+        # lgyro_z  = data["gyro_z"]
         lflex_1 = data["flex_raw_1"]
-        lflex_2 = data["flex_raw_2"]
+        lflex_2 = data["flex_raw_2"]*2
         lflex_3 = data["flex_raw_3"]
         lflex_4 = data["flex_raw_4"]
-        lflex_5 = data["flex_raw_5"]
-        ldata = [laccel_x, laccel_y, laccel_z, lgyro_x, lgyro_y, lgyro_z, ltemp, lflex_1, lflex_2, lflex_3, lflex_4, lflex_5]
-        predict("l", ldata)
+        # lflex_5 = data["flex_raw_5"]
+        ldata = [lflex_1, lflex_2, lflex_3, lflex_4]
+        predict(ldata)
     return "OK"
 
 app.run(host="0.0.0.0", port=5000)

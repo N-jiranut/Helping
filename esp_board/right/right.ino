@@ -4,10 +4,19 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-const char* ssid = "vivo_V25";
-const char* password = "02_jiranut";
+const char* ssid = "DAIMA SYARIAH";
+const char* password = "12345678";
+// const char* ssid = "vivo_V25";
+// const char* password = "02_jiranut";
+// const char* ssid = "PU_2G";
+// const char* password = "0934964163";
+const int btn = 14;
+int cbtn = HIGH;
 
-const char* serverName = "http://10.207.14.216:5000/right";
+const char* serverName = "http://192.168.88.59:5000/right";
+const char* svbtn = "http://192.168.88.59:5000/btn";
+// const char* svstart = "http://10.207.14.216:5000/start";
+// const char* svbtn = "http://10.207.14.216:5000/btn";
 
 WiFiClient client;
 HTTPClient http;
@@ -24,11 +33,12 @@ void connectToWiFi() {
 
 Adafruit_MPU6050 mpu;
 
-const int FLEX_PIN_THUMB = 4;
-const int FLEX_PIN_INDEX = 6;
-const int FLEX_PIN_MIDDLE = 15;
-const int FLEX_PIN_RING = 17;
-const int FLEX_PIN_PINKY = 8;
+const int FLEX_PIN_THUMB = 12;
+const int FLEX_PIN_INDEX = 10;
+const int FLEX_PIN_MIDDLE = 8;
+const int FLEX_PIN_RING = 6;
+const int FLEX_PIN_PINKY = 4;
+unsigned long currenttime;
 
 int flexSensorValues[5];
 const int FLEX_PINS[] = {FLEX_PIN_THUMB, FLEX_PIN_INDEX, FLEX_PIN_MIDDLE, FLEX_PIN_RING, FLEX_PIN_PINKY};
@@ -37,6 +47,7 @@ const int FLEX_MIN_STRAIGHT = 2000;
 const int FLEX_MAX_BENT = 3500;
 
 void setup() {
+  pinMode(btn, INPUT_PULLUP);
   Serial.begin(115200);
   delay(1000);
 
@@ -86,46 +97,46 @@ void setup() {
   Serial.println("------------------------------------");
 }
 
-unsigned long start = 0;
-unsigned long del = 0;
-
 void loop() {
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
-  for (int i = 0; i < 5; i++) {
-    flexSensorValues[i] = analogRead(FLEX_PINS[i]);
-    int bendPercentage = map(flexSensorValues[i], FLEX_MIN_STRAIGHT, FLEX_MAX_BENT, 0, 100);
-    bendPercentage = constrain(bendPercentage, 0, 100);
-  }
-  Serial.println();
-  if (WiFi.status() == WL_CONNECTED) {
-    http.begin(client, serverName);
-    http.addHeader("Content-Type", "application/json");
-    String json = "{";
-    json += "\"accel_x\":" + String(a.acceleration.x, 2) + ",";
-    json += "\"accel_y\":" + String(a.acceleration.y, 2) + ",";
-    json += "\"accel_z\":" + String(a.acceleration.z, 2) + ",";
-    json += "\"gyro_x\":" + String(g.gyro.x, 2) + ",";
-    json += "\"gyro_y\":" + String(g.gyro.y, 2) + ",";
-    json += "\"gyro_z\":" + String(g.gyro.z, 2) + ",";
-    json += "\"temperature\":" + String(temp.temperature, 2) + ",";
-    json += "\"flex_raw_1\":" + String(flexSensorValues[0]) + ",";
-    json += "\"flex_raw_2\":" + String(flexSensorValues[1]) + ",";
-    json += "\"flex_raw_3\":" + String(flexSensorValues[2]) + ",";
-    json += "\"flex_raw_4\":" + String(flexSensorValues[3]) + ",";
-    json += "\"flex_raw_5\":" + String(flexSensorValues[4]);
-    json += "}";
-    int httpResponseCode = http.POST(json);
-    if (httpResponseCode > 0) {
-      String response = http.getString();
-      Serial.println("Data sent to Google Sheets: " + response);
-    } else {
-      Serial.println("Error sending data. HTTP code: " + String(httpResponseCode));
-    }
+  int timenow = millis();
+  int btno = digitalRead(btn);
+  if (btno == HIGH && cbtn == LOW){
+    http.begin(client, svbtn);
+    int httpResponseCode = http.POST("postData");
+    Serial.println(httpResponseCode);
     http.end();
-  } else {
-    Serial.println("WiFi disconnected. Reconnecting...");
-    connectToWiFi();
+    delay(2000);
   }
-  delay(250);
+
+  if (timenow-currenttime>=500){
+    currenttime = timenow;
+    sensors_event_t a, g, temp;
+    mpu.getEvent(&a, &g, &temp);
+    for (int i = 0; i < 5; i++) {
+      flexSensorValues[i] = analogRead(FLEX_PINS[i]);
+      int bendPercentage = map(flexSensorValues[i], FLEX_MIN_STRAIGHT, FLEX_MAX_BENT, 0, 100);
+      bendPercentage = constrain(bendPercentage, 0, 100);
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      http.begin(client, serverName);
+      http.addHeader("Content-Type", "application/json");
+      String json = "{";
+      json += "\"accel_x\":" + String(a.acceleration.x, 2) + ",";
+      json += "\"accel_y\":" + String(a.acceleration.y, 2) + ",";
+      json += "\"accel_z\":" + String(a.acceleration.z, 2) + ",";
+      json += "\"gyro_x\":" + String(g.gyro.x, 2) + ",";
+      json += "\"gyro_y\":" + String(g.gyro.y, 2) + ",";
+      json += "\"gyro_z\":" + String(g.gyro.z, 2) + ",";
+      json += "\"flex_raw_1\":" + String(flexSensorValues[0]) + ",";
+      json += "\"flex_raw_2\":" + String(flexSensorValues[1]) + ",";
+      json += "\"flex_raw_3\":" + String(flexSensorValues[2]) + ",";
+      json += "\"flex_raw_4\":" + String(flexSensorValues[3]) + ",";
+      json += "\"flex_raw_5\":" + String(flexSensorValues[4]);
+      json += "}";
+      int httpResponseCode = http.POST(json);
+      http.end();
+    }
+  }
+  cbtn = btno;
+  delay(10);
 }
